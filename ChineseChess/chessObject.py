@@ -11,19 +11,26 @@ class AbsChess:
 
     def __init__(self, chess_color, x_pos, y_pos):
         self.color = chess_color
-        self._x = x_pos
-        self._y = y_pos
+        self.pos_x = x_pos
+        self.pos_y = y_pos
+        self.is_alive = True
 
-    def get_can_move_pos(self, board):
-        # return can move next position.
-        return
+    def get_can_move_pos(self, board, move_area=None):
+        if self.is_alive:
+            return move_area
+        else:
+            return []
 
     def move(self, board, next_x, next_y):
         if [next_x, next_y] not in self.get_can_move_pos(board):
             return False
         else:
-            self._x = next_x
-            self._y = next_y
+            if board[next_x][next_y] is not None:
+                board[next_x][next_y].is_alive = False
+            board[next_x][next_y] = board[self.pos_x][self.pos_y]
+            board[self.pos_x][self.pos_y] = None
+            self.pos_x = next_x
+            self.pos_y = next_y
             return True
 
     def is_can_move(self, board, pos_x, pos_y, move_area):
@@ -31,7 +38,7 @@ class AbsChess:
             move_area.append([pos_x, pos_y])
 
     def get_pos(self):
-        return [self._x, self._y]
+        return [self.pos_x, self.pos_y]
 
 
 class Soldiers(AbsChess):
@@ -46,19 +53,14 @@ class Soldiers(AbsChess):
 
         super().__init__(chess_color, x, self.y_range[3])
 
-    def get_can_move_pos(self, board):
+    def get_can_move_pos(self, board, move_area=None):
         move_area = []
 
-        if self._y < self.y_range[5]:
-            self.is_can_move(board, self._x, self._y + 1, move_area)
-        elif self._y + 1 in self.y_range:
-            self.is_can_move(board, self._x, self._y + 1, move_area)
-        elif self._x + 1 in X_RANGE:
-            self.is_can_move(board, self._x + 1, self._y, move_area)
-        elif self._x - 1 in X_RANGE:
-            self.is_can_move(board, self._x - 1, self._y, move_area)
+        for i in [[1, 0], [0, 1], [-1, 0]]:
+            if (self.pos_y + i[1] in self.y_range[-5:] and self.pos_x + i[0] in X_RANGE) or (self.pos_y in self.y_range[:5] and i[0] is 0):
+                self.is_can_move(board, self.pos_x + i[0], self.pos_y + i[1], move_area)
 
-        return move_area
+        return super().get_can_move_pos(board, move_area=move_area)
 
 
 class Cannons(AbsChess):
@@ -76,74 +78,30 @@ class Cannons(AbsChess):
         elif side is L:
             super().__init__(chess_color, 1, self.y_range[2])
 
-    def get_can_move_pos(self, board):
+    def get_can_move_pos(self, board, move_area=None):
         move_area = []
 
-        no_chess = True
-        pos_x_p = self._x + 1
-        while pos_x_p in X_RANGE:
-            if board[pos_x_p][self._y] is None and no_chess:
-                move_area.append([pos_x_p, self._y])
-            elif not no_chess:
-                if board[pos_x_p][self._y] is None:
-                    pos_x_p += 1
-                    continue
-                elif board[pos_x_p][self._y].color is not self.color:
-                    move_area.append([pos_x_p, self._y])
-                break
-            else:
-                no_chess = False
-            pos_x_p += 1
+        for i in [[1, 0], [-1, 0], [0, 1], [0, -1]]:
+            pos_x = self.pos_x + i[0]
+            pos_y = self.pos_y + i[1]
+            no_chess = True
+            while pos_x in X_RANGE and pos_y in self.y_range:
+                if board[pos_x][pos_y] is None and no_chess:
+                    move_area.append([pos_x, pos_y])
+                elif not no_chess:
+                    if board[pos_x][pos_y] is None:
+                        pos_x += i[0]
+                        pos_y += i[1]
+                        continue
+                    elif board[pos_x][pos_y].color is not self.color:
+                        move_area.append([pos_x, pos_y])
+                    break
+                else:
+                    no_chess = False
+                pos_x += i[0]
+                pos_y += i[1]
 
-        no_chess = True
-        pos_x_n = self._x - 1
-        while pos_x_n in X_RANGE:
-            if board[pos_x_n][self._y] is None and no_chess:
-                move_area.append([pos_x_n, self._y])
-            elif not no_chess:
-                if board[pos_x_n][self._y] is None:
-                    pos_x_n -= 1
-                    continue
-                elif board[pos_x_n][self._y].color is not self.color:
-                    move_area.append([pos_x_n, self._y])
-                break
-            else:
-                no_chess = False
-            pos_x_n -= 1
-
-        no_chess = True
-        pos_y_p = self._y + 1
-        while pos_y_p in self.y_range:
-            if board[self._x][pos_y_p] is None and no_chess:
-                move_area.append([self._x, pos_y_p])
-            elif not no_chess:
-                if board[self._x][pos_y_p] is None:
-                    pos_y_p += 1
-                    continue
-                elif board[self._x][pos_y_p].color is not self.color:
-                    move_area.append([self._x, pos_y_p])
-                break
-            else:
-                no_chess = False
-            pos_y_p += 1
-
-        no_chess = True
-        pos_y_n = self._y - 1
-        while pos_y_n in self.y_range:
-            if board[self._x][pos_y_n] is None and no_chess:
-                move_area.append([self._x, pos_y_n])
-            elif not no_chess:
-                if board[self._x][pos_y_n] is None:
-                    pos_y_n -= 1
-                    continue
-                elif board[self._x][pos_y_n].color is not self.color:
-                    move_area.append([self._x, pos_y_n])
-                break
-            else:
-                no_chess = False
-            pos_y_n -= 1
-
-        return move_area
+        return super().get_can_move_pos(board, move_area=move_area)
 
 
 class Chariots(AbsChess):
@@ -161,51 +119,24 @@ class Chariots(AbsChess):
         elif side is L:
             super().__init__(chess_color, 0, self.y_range[0])
 
-    def get_can_move_pos(self, board):
+    def get_can_move_pos(self, board, move_area=None):
         move_area = []
 
-        pos_x_p = self._x + 1
-        while pos_x_p in X_RANGE:
-            if board[pos_x_p][self._y] is None:
-                move_area.append([pos_x_p, self._y])
-                pos_x_p += 1
-            elif board[pos_x_p][self._y].color is not self.color:
-                move_area.append([pos_x_p, self._y])
-                break
-            else:
-                break
-        pos_x_n = self._x - 1
-        while pos_x_n in X_RANGE:
-            if board[pos_x_n][self._y] is None:
-                move_area.append([pos_x_n, self._y])
-                pos_x_n -= 1
-            elif board[pos_x_n][self._y].color is not self.color:
-                move_area.append([pos_x_n, self._y])
-                break
-            else:
-                break
-        pos_y_p = self._y + 1
-        while pos_y_p in self.y_range:
-            if board[self._x][pos_y_p] is None:
-                move_area.append([self._x, pos_y_p])
-                pos_y_p += 1
-            elif board[self._x][pos_y_p].color is not self.color:
-                move_area.append([self._x, pos_y_p])
-                break
-            else:
-                break
-        pos_y_n = self._y - 1
-        while pos_y_n in self.y_range:
-            if board[self._x][pos_y_n] is None:
-                move_area.append([self._x, pos_y_n])
-                pos_y_n -= 1
-            elif board[self._x][pos_y_n].color is not self.color:
-                move_area.append([self._x, pos_y_n])
-                break
-            else:
-                break
+        for i in [[1, 0], [-1, 0], [0, 1], [0, -1]]:
+            pos_x = self.pos_x + i[0]
+            pos_y = self.pos_y + i[1]
+            while pos_x in X_RANGE and pos_y in self.y_range:
+                if board[pos_x][pos_y] is None:
+                    move_area.append([pos_x, pos_y])
+                    pos_x += i[0]
+                    pos_y += i[1]
+                elif board[pos_x][pos_y].color is not self.color:
+                    move_area.append([pos_x, pos_y])
+                    break
+                else:
+                    break
 
-        return move_area
+        return super().get_can_move_pos(board, move_area=move_area)
 
 
 class Horses(AbsChess):
@@ -223,34 +154,27 @@ class Horses(AbsChess):
         elif side is L:
             super().__init__(chess_color, 1, self.y_range[0])
 
-    def get_can_move_pos(self, board):
+    def get_can_move_pos(self, board, move_area=None):
         move_area = []
 
-        if self._x - 2 in X_RANGE and board[self._x - 1][self._y] is None:
-            if self._y - 1 in self.y_range:
-                self.is_can_move(board, self._x - 2, self._y - 1, move_area)
-            if self._y + 1 in self.y_range:
-                self.is_can_move(board, self._x - 2, self._y + 1, move_area)
-        if self._x + 2 in X_RANGE and board[self._x + 1][self._y] is None:
-            if self._y - 1 in self.y_range:
-                self.is_can_move(board, self._x + 2, self._y - 1, move_area)
-            if self._y + 1 in self.y_range:
-                self.is_can_move(board, self._x + 2, self._y + 1, move_area)
-        if self._y - 2 in self.y_range and board[self._x][self._y - 1] is None:
-            if self._x - 1 in X_RANGE:
-                self.is_can_move(board, self._x - 1, self._y - 2, move_area)
-            if self._x + 1 in X_RANGE:
-                self.is_can_move(board, self._x + 1, self._y - 2, move_area)
-        if self._y + 2 in self.y_range and board[self._x][self._y + 1] is None:
-            if self._x - 1 in X_RANGE:
-                self.is_can_move(board, self._x - 1, self._y + 2, move_area)
-            if self._x + 1 in X_RANGE:
-                self.is_can_move(board, self._x + 1, self._y + 2, move_area)
+        for way in [
+            [1, 2, 0, 1],
+            [-1, 2, 0, 1],
+            [1, -2, 0, -1],
+            [-1, -2, 0, -1],
+            [2, 1, 1, 0],
+            [2, -1, 1, 0],
+            [-2, 1, -1, 0],
+            [-2, -1, -1, 0]]:
+            x = self.pos_x + way[0]
+            y = self.pos_y + way[1]
+            if x in X_RANGE and y in self.y_range and board[self.pos_x + way[2]][self.pos_y + way[3]] is None:
+                self.is_can_move(board, x, y, move_area)
 
-        return move_area
+        return super().get_can_move_pos(board, move_area=move_area)
 
 
-class Elephants (AbsChess):
+class Elephants(AbsChess):
 
     def __init__(self, chess_color, side):
         if chess_color is RED:
@@ -265,28 +189,16 @@ class Elephants (AbsChess):
         elif side is L:
             super().__init__(chess_color, 2, self.y_range[0])
 
-    def get_can_move_pos(self, board):
+    def get_can_move_pos(self, board, move_area=None):
         move_area = []
 
-        if self._x is 0:
-            self.is_can_move(board, 2, self.y_range[0], move_area)
-            self.is_can_move(board, 2, self.y_range[4], move_area)
-        elif self._x is 2:
-            self.is_can_move(board, 4, self.y_range[2], move_area)
-            self.is_can_move(board, 0, self.y_range[2], move_area)
-        elif self._x is 4:
-            self.is_can_move(board, 2, self.y_range[0], move_area)
-            self.is_can_move(board, 2, self.y_range[4], move_area)
-            self.is_can_move(board, 6, self.y_range[0], move_area)
-            self.is_can_move(board, 6, self.y_range[4], move_area)
-        elif self._x is 6:
-            self.is_can_move(board, 4, self.y_range[2], move_area)
-            self.is_can_move(board, 8, self.y_range[2], move_area)
-        elif self._x is 8:
-            self.is_can_move(board, 6, self.y_range[0], move_area)
-            self.is_can_move(board, 6, self.y_range[4], move_area)
+        for i in [[2, 2, 1, 1], [2, -2, 1, -1], [-2, 2, -1, 1], [-2, -2, -1, -1]]:
+            x = self.pos_x + i[0]
+            y = self.pos_y + i[1]
+            if x in X_RANGE and y in self.y_range[:5] and board[self.pos_x + i[2]][self.pos_y + i[3]] is None:
+                self.is_can_move(board, x, y, move_area)
 
-        return move_area
+        return super().get_can_move_pos(board, move_area=move_area)
 
 
 class Advisors(AbsChess):
@@ -304,18 +216,14 @@ class Advisors(AbsChess):
         elif side is L:
             super().__init__(chess_color, 3, self.y_range[0])
 
-    def get_can_move_pos(self, board):
+    def get_can_move_pos(self, board, move_area=None):
         move_area = []
 
-        if self._y in [self.y_range[0], self.y_range[2]]:
-            self.is_can_move(board, 4, self.y_range[1], move_area)
-        else:
-            self.is_can_move(board, 3, self.y_range[0], move_area)
-            self.is_can_move(board, 5, self.y_range[0], move_area)
-            self.is_can_move(board, 3, self.y_range[2], move_area)
-            self.is_can_move(board, 5, self.y_range[2], move_area)
+        for i in [[1, 1], [1, -1], [-1, 1], [-1, -1]]:
+            if self.pos_x + i[0] in [3, 4, 5] and self.pos_y + i[1] in self.y_range[:3]:
+                self.is_can_move(board, self.pos_x + i[0], self.pos_y + i[1], move_area)
 
-        return move_area
+        return super().get_can_move_pos(board, move_area=move_area)
 
 
 class Generals(AbsChess):
@@ -330,22 +238,14 @@ class Generals(AbsChess):
 
         super().__init__(chess_color, 4, self.y_range[0])
 
-    def get_can_move_pos(self, board):
+    def get_can_move_pos(self, board, move_area=None):
         move_area = []
 
-        if self._y in [self.y_range[0], self.y_range[2]]:
-            self.is_can_move(board, self._x, self.y_range[1], move_area)
-        else:
-            self.is_can_move(board, self._x, self.y_range[0], move_area)
-            self.is_can_move(board, self._x, self.y_range[2], move_area)
+        for i in [[1, 0], [0, -1], [-1, 0], [0, 1]]:
+            if self.pos_x + i[0] in [3, 4, 5] and self.pos_y + i[1] in self.y_range[:3]:
+                self.is_can_move(board, self.pos_x + i[0], self.pos_y + i[1], move_area)
 
-        if self._x in [3, 5]:
-            self.is_can_move(board, 4, self._y, move_area)
-        else:
-            self.is_can_move(board, 3, self._y, move_area)
-            self.is_can_move(board, 5, self._y, move_area)
-
-        return move_area
+        return super().get_can_move_pos(board, move_area=move_area)
 
 
 def __init__(self):
